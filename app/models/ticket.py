@@ -13,7 +13,7 @@ class Ticket(db.Model):
     status = db.Column(db.String(50), default="Open")
 
     created_by = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    assigned_to = db.Column(db.Integer, db.ForeignKEy('users.id'),nullable=True)
+    assigned_to = db.Column(db.Integer, db.ForeignKey('users.id'),nullable=True)
 
     phone = db.Column(db.String(15), nullable=False)
 
