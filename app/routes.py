@@ -113,3 +113,66 @@ def create_ticket():
         "message": "Ticket created successfully",
         "ticket_id" : ticket.id
     })
+
+# View Open Tickets(Technician & Head)
+@main.route("/tickets", methods=["GET"])
+def view_tickets():
+    if "user_id" not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    if session.get("role") not in ["technician", "head"]:
+        return jsonify({"error": "Access denied"}), 403
+    
+    tickets = Ticket.query.filter_by(status="Open").all()
+
+    result = []
+    for t in tickets:
+        result.append({
+            "id": t.id,
+            "title": t.title,
+            "issue_type": t.issue_type,
+            "location": t.location,
+            "status": t.status
+        })
+
+    return jsonify(result)
+
+# Pick Ticket (Technician) 
+@main.route("/pick-ticket/<int:ticket_id>", methods=["POST"])
+def pick_ticket(ticket_id):
+    if "user_id" not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    if session.get("role") != "technician":
+        return jsonify({"error": "Only technician can pick tickets"}), 403
+    
+    technician_id = session["user_id"]
+
+    # Check if technician already has active ticket
+    existing_ticket = Ticket.query.filter(
+        Ticket.assigned_to == technician_id,
+        Ticket.status.in_(["Assigned", "In Progress"])
+    ).first()
+
+    if existing_ticket:
+        return jsonify({"error": "You already have an active ticket"}), 400
+    
+    # Get ticket
+    ticket = Ticket.query.get(ticket_id)
+
+    if not ticket:
+        return jsonify({"error": "Ticket not found"}), 404
+    
+    if ticket.status != "Open":
+        return jsonify({"error": "Ticket already taken"}), 400
+    
+    # Assign ticket
+    ticket.assigned_to = technician_id
+    ticket.status = "Assigned"
+
+    db.session.commit()
+
+    return jsonify({
+        "message": "Ticket assigned successfully",
+        "ticket_id": ticket.id
+    })
