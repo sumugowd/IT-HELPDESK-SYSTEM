@@ -176,3 +176,78 @@ def pick_ticket(ticket_id):
         "message": "Ticket assigned successfully",
         "ticket_id": ticket.id
     })
+
+# Update Ticket status
+@main.route("/update-ticket/<int:ticket_id>", methods=["POST"])
+def update_ticket(ticket_id):
+    if "user_id" not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    data = request.get_json()
+    new_status = data.get("status")
+
+    ticket = Ticket.query.get(ticket_id)
+
+    if not ticket:
+        return jsonify({"error": "Ticket not found"}), 404
+    
+    user_id = session["user_id"]
+    role = session["role"]
+
+    # Technician updates
+    if role == "technician":
+        if ticket.assigned_to != user_id:
+            return jsonify({"error": "Not your ticket"}), 403
+        
+        if ticket.status == "Assigned" and new_status == "In Progress":
+            ticket.status = "In Progress"
+
+        elif ticket.status == "In Progress" and new_status == "Resolved":
+            ticket.status = "Resolved"
+
+        else:
+            return jsonify({"error": "Invalid status transition"}), 400
+        
+    # Staff closes ticket
+    elif role == "staff":
+        if ticket.created_by != user_id:
+            return jsonify({"error": "Not your ticket"}), 403
+        
+        if ticket.status == "Resolved" and new_status == "Closed":
+            ticket.status = "Closed"
+        else:
+            return jsonify({"error": "Invalid status transition"}), 400
+        
+    else:
+        return jsonify({"error": "Access denied"}), 403
+    
+    # Only commit if everything valid
+    db.session.commit()
+
+    return jsonify({
+        "message": "Ticket updated",
+        "new_status": ticket.status
+    })
+
+# View My Tickets (Staff)
+@main.route("/my-tickets", methods=["GET"])
+def my_tickets():
+    if "user_id" not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    if session.get("role") != "staff":
+        return jsonify({"error": "Access denied"}), 403
+    
+    tickets = Ticket.query.filter_by(created_by=session["user_id"]).all()
+    
+    result = []
+    for t in tickets:
+        result.append({
+            "id": t.id,
+            "title": t.title,
+            "status": t.status,
+            "issue_type": t.issue_type,
+            "location": t.location
+        })
+
+    return jsonify(result)
