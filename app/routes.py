@@ -5,6 +5,7 @@ from app.models.user import User
 from app.models.ticket import Ticket
 from app.models.user import User
 from app.models.notification import Notification
+from flask import render_template
 
 main = Blueprint('main', __name__)
 
@@ -338,3 +339,12 @@ def get_notifications():
         })
 
     return jsonify(result)
+
+@main.route("/dashboard")
+def dashboard():
+    return render_template("index.html")
+
+@main.route("/auth")
+def auth():
+    return render_template("auth.html")
+

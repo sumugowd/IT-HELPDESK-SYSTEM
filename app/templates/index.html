@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>IT Helpdesk</title>
+    </head>
+    <body>
+
+        <h1>IT Helpdesk System</h1>
+
+        <h2>Create Ticket</h2>
+
+        <input id = "title" placeholder="Title"><br><br>
+        <input id = "issue" placeholder="Issue Type"><br><br>
+        <input id = "location" placeholder="Location"><br><br>
+        <input id = "phone" placeholder="Phone"><br><br>
+
+        <textarea id = "description" placeholder="Description"></textarea><br><br>
+
+        <button onclick="createTicket()">Create Ticket</button>
+
+        <h2>My Tickets</h2>
+        <button onclick="loadTickets()">Refresh</button>
+
+        <ul id = "tickets"></ul>
+
+        <script>
+            async function createTicket() {
+                const res = await fetch('/create-ticket',{
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        title: document.getElementById('title').value,
+                        description: document.getElementById('description').value,
+                        issue_type: document.getElementById('issue').value,
+                        location: document.getElementById('location').value,
+                        phone: document.getElementById('phone').value
+                    })
+                });
+                
+                const data = await res.json();
+                alert(data.message || data.error);
+            }
+
+            async function loadTickets() {
+                const res = await fetch('/my-tickets');
+                const data = await res.json();
+                
+                const list = document.getElementById('tickets');
+                list.innerHTML = '';
+
+                data.forEach(t =>{
+                    const li = document.createElement('li');
+                    li.innerText = `${t.title} - ${t.status}`;
+                    list.appendChild(li);
+                });
+            }
+        </script>
+        
+    </body>
+</html>
