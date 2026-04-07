@@ -3,6 +3,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models.user import User
 from app.models.ticket import Ticket
+from app.models.user import User
 
 main = Blueprint('main', __name__)
 
@@ -242,12 +243,51 @@ def my_tickets():
     
     result = []
     for t in tickets:
+        technician = None
+
+        if t.assigned_to:
+            technician = User.query.get(t.assigned_to)
+
+        
         result.append({
             "id": t.id,
             "title": t.title,
             "status": t.status,
             "issue_type": t.issue_type,
-            "location": t.location
+            "location": t.location,
+
+            # Technician details
+            "technician_name": technician.name if technician else None,
+            "technician_phone": technician.phone if technician else None
+        })
+
+    return jsonify(result)
+
+# View My Assigned Tickets (Technician)
+@main.route("/assigned-tickets", methods=["GET"])
+def assigned_tickets():
+    if "user_id" not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    if session.get("role") != "technician":
+        return jsonify({"error": "Access denied"}), 403
+    
+    tickets = Ticket.query.filter_by(assigned_to=session["user_id"]).all()
+
+    result = []
+    for t in tickets:
+        staff = User.query.get(t.created_by)
+
+        result.append({
+            "id": t.id,
+            "title": t.title,
+            "status": t.status,
+            "issue_type": t.issue_type,
+            "location": t.location,
+
+            # Staff details
+            "staff_name": staff.name,
+            "staff_phone": staff.phone
         })
 
     return jsonify(result)
