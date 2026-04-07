@@ -4,6 +4,7 @@ from app import db
 from app.models.user import User
 from app.models.ticket import Ticket
 from app.models.user import User
+from app.models.notification import Notification
 
 main = Blueprint('main', __name__)
 
@@ -110,6 +111,11 @@ def create_ticket():
     db.session.add(ticket)
     db.session.commit()
 
+    notification = Notification(
+        user_id = session["user_id"],
+        message = f"Ticket '{title}' created successfully"
+    )
+
     return jsonify({
         "message": "Ticket created successfully",
         "ticket_id" : ticket.id
@@ -173,6 +179,20 @@ def pick_ticket(ticket_id):
 
     db.session.commit()
 
+    # Notify technician
+    notif1 = Notification(
+        user_id=technician_id,
+        message=f"You have been assigned ticket #{ticket.id}"
+    )
+
+    # Nofify staff
+    notif2 = Notification(
+        user_id=ticket.created_by,
+        message=f"Your ticket #{ticket.id} has been assigned"
+    )
+
+    db.session.add_all([notif1, notif2])
+
     return jsonify({
         "message": "Ticket assigned successfully",
         "ticket_id": ticket.id
@@ -221,6 +241,13 @@ def update_ticket(ticket_id):
         
     else:
         return jsonify({"error": "Access denied"}), 403
+    
+    notif = Notification(
+        user_id = ticket.created_by,
+        message=f"Ticket #{ticket.id} status updated to {ticket.status}"
+    )
+
+    db.session.add(notif)
     
     # Only commit if everything valid
     db.session.commit()
@@ -288,6 +315,26 @@ def assigned_tickets():
             # Staff details
             "staff_name": staff.name,
             "staff_phone": staff.phone
+        })
+
+    return jsonify(result)
+
+# Get Notifications
+@main.route("/notifications", methods=["GET"])
+def get_notifications():
+    if "user_id" not in session:
+        return jsonify({"error": "Login required"}), 401
+    
+    notifications = Notification.query.filter_by(
+        user_id=session["user_id"]
+    ).order_by(Notification.created_at.desc()).all()
+
+    result = []
+    for n in notifications:
+        result.append({
+            "id": n.id,
+            "message": n.message,
+            "is_read": n.is_read
         })
 
     return jsonify(result)
