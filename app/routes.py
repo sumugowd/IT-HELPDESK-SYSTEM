@@ -1,4 +1,4 @@
-from flask import Blueprint , request, jsonify, session
+from flask import Blueprint , request, jsonify, session, redirect, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
 from app import db
 from app.models.user import User
@@ -342,7 +342,10 @@ def get_notifications():
 
 @main.route("/dashboard")
 def dashboard():
-    return render_template("index.html")
+    if "user_id" not in session:
+        return redirect("/auth")
+    
+    return render_template("index.html", role=session.get("role"))
 
 @main.route("/auth")
 def auth():

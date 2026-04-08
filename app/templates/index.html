@@ -1,29 +1,53 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <title>IT Helpdesk</title>
+        <title>Dashboard</title>
     </head>
     <body>
 
-        <h1>IT Helpdesk System</h1>
+        <h1>IT Helpdesk Dashboard</h1>
 
-        <h2>Create Ticket</h2>
+        <!-- STAFF UI-->
+         <div id="staff-section" style="display: none;">
+            <h2>Create Ticket</h2>
 
-        <input id = "title" placeholder="Title"><br><br>
-        <input id = "issue" placeholder="Issue Type"><br><br>
-        <input id = "location" placeholder="Location"><br><br>
-        <input id = "phone" placeholder="Phone"><br><br>
+            <input id = "title" placeholder="Title"><br><br>
+            <input id = "issue" placeholder="Issue Type"><br><br>
+            <input id = "location" placeholder="Location"><br><br>
+            <input id = "phone" placeholder="Phone"><br><br>
 
-        <textarea id = "description" placeholder="Description"></textarea><br><br>
+            <textarea id = "description" placeholder="Description"></textarea><br><br>
 
-        <button onclick="createTicket()">Create Ticket</button>
+            <button onclick="createTicket()">Create Ticket</button>
 
-        <h2>My Tickets</h2>
-        <button onclick="loadTickets()">Refresh</button>
+            <h2>My Tickets</h2>
+            <button onclick="loadTickets()">Refresh</button>
 
-        <ul id = "tickets"></ul>
+            <ul id = "tickets"></ul>
+        </div>
+
+        <!-- TECHNICIAN UI-->
+         <div id="tech-section" style="display: none;">
+            <h2>Open Tickets</h2>
+            <button onclick="loadOpenTickets()">Refresh</button>
+            <ul id="openTickets"></ul>
+
+            <h2>My Assigned Tickets</h2>
+            <button onclick="loadAssigned()">Refresh</button>
+            <ul id="assignedTickets"></ul>
+         </div>
 
         <script>
+            const role = "{{ role }}";
+
+            // Show correct section
+            if(role === "staff"){
+                document.getElementById("staff-section").style.display = "block";
+            }else if(role === "technician"){
+                document.getElementById("tech-section").style.display = "block";
+            }
+
+            // =============== STAFF ===================
             async function createTicket() {
                 const res = await fetch('/create-ticket',{
                     method: 'POST',
@@ -41,18 +65,95 @@
                 alert(data.message || data.error);
             }
 
-            async function loadTickets() {
+            async function loadMyTickets() {
                 const res = await fetch('/my-tickets');
                 const data = await res.json();
                 
-                const list = document.getElementById('tickets');
+                const list = document.getElementById('myTickets');
                 list.innerHTML = '';
 
                 data.forEach(t =>{
                     const li = document.createElement('li');
-                    li.innerText = `${t.title} - ${t.status}`;
+                    li.innerText = `${t.title} - ${t.status} - Tech: ${t.technician_name || "Not assigned"}`;
+
+                    // Close button
+                    if(t.status === "Resolved"){
+                        const btn = document.createElement('button');
+                        btn.innerText = "Close";
+                        btn.onclick = () => updateStatus(t.id, "Closed");
+                        li.appendChild(btn);
+                    }
                     list.appendChild(li);
                 });
+            }
+
+            // ==================== TECHNICIAN ==================
+
+            async function loadOpenTickets(){
+                const res = await fetch('/tickets');
+                const data = await res.json();
+
+                const list = document.getElementById('openTickets');
+                list.innerHTML = '';
+
+                data.forEach(t =>{
+                    const li = document.createElement('li');
+                    li.innerText = `${t.title} (${t.location})`;
+
+                    const btn = document.createElement('button');
+                    btn.innerText = "Pick";
+                    btn.onclick = () => pickTicket(t.id);
+
+                    li.appendChild(btn);
+                    list.appendChild(li);
+                });
+            }
+
+            async function loadAssigned() {
+                const res = await fetch('/assigned-tickets');
+                const data = await res.json();
+
+                const list = document.getElementById('assignedTickets');
+                list.innerHTML = '';
+
+                data.forEach(t => {
+                    const li = document.createElement("li");
+
+                    li.innerText = `${t.title} - ${t.status} (Staff: ${t.staff_name})`;
+
+                    if(t.status === "Assigned"){
+                    addButton(li, t.id, "Start", "In Progress");
+                    }
+
+                    if(t.status === "In Progress"){
+                    addButton(li, t.id, "Resolve", "Resolved");
+                    }
+                    list.appendChild(li);
+                });
+            }
+
+            function addButton(li, id, text, status){
+            const btn = document.createElement('button');
+            btn.innerText = text;
+            btn.onclick = () => updateStatus(id, status);
+            li.appendChild(btn);
+            }
+
+            async function pickTicket(id){
+                await fetch(`/pick-ticket/${id}`, { method: 'POST'});
+                loadOpenTickets();
+                loadAssigned();
+            }
+
+            async function updateStatus(id, status){
+                await fetch(`/update-ticket/${id}`,{
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ status })
+                });
+
+                loadAssigned();
+                loadMyTickets();
             }
         </script>
         
