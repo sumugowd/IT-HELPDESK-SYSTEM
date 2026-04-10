@@ -5,6 +5,13 @@
     </head>
     <body>
 
+        <button onclick="logout()">Logout</button>
+        <h2>Notifications</h2>
+        <button onclick="loadNotifications()">Refresh Notifications</button>
+        <ul id="notifications"></ul>
+
+        <hr>
+
         <h1>IT Helpdesk Dashboard</h1>
 
         <!-- STAFF UI-->
@@ -154,6 +161,24 @@
 
                 loadAssigned();
                 loadMyTickets();
+            }
+
+            // Load Notifications
+            async function loadNotifications() {
+                const res = await fetch('/notifications');
+                list.innerHTML = '';
+
+                data.forEach(n => {
+                    const li = document.createElement('li');
+                    li.innerText = n.message;
+                    list.appendChild(li);
+                });
+            }
+
+            // Logout
+            async function logout(){
+                await fetch('logout');
+                window.location.href = "/auth";
             }
         </script>
         
