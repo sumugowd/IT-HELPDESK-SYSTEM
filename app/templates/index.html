@@ -2,19 +2,21 @@
 <html>
     <head>
         <title>Dashboard</title>
+        <link rel="stylesheet" href="/static/style.css">
     </head>
     <body>
 
         <button onclick="logout()">Logout</button>
         <h2>Notifications</h2>
         <button onclick="loadNotifications()">Refresh Notifications</button>
-        <ul id="notifications"></ul>
+        <div id="notifications"></div>
 
         <hr>
 
         <h1>IT Helpdesk Dashboard</h1>
 
         <!-- STAFF UI-->
+         <div class="container">
          <div id="staff-section" style="display: none;">
             <h2>Create Ticket</h2>
 
@@ -32,8 +34,10 @@
 
             <ul id = "tickets"></ul>
         </div>
+        </div>
 
         <!-- TECHNICIAN UI-->
+         <div class="container">
          <div id="tech-section" style="display: none;">
             <h2>Open Tickets</h2>
             <button onclick="loadOpenTickets()">Refresh</button>
@@ -42,6 +46,7 @@
             <h2>My Assigned Tickets</h2>
             <button onclick="loadAssigned()">Refresh</button>
             <ul id="assignedTickets"></ul>
+         </div>
          </div>
 
         <script>
@@ -80,8 +85,14 @@
                 list.innerHTML = '';
 
                 data.forEach(t =>{
-                    const li = document.createElement('li');
-                    li.innerText = `${t.title} - ${t.status} - Tech: ${t.technician_name || "Not assigned"}`;
+                    const div = document.createElement('div');
+                    div.className = "card";
+                    div.innerHTML = `
+                        <strong>${t.title}</strong><br>
+                        Status: ${t.status}<br>
+                        Location: ${t.location}<br>
+                        Technician: ${t.technician_name || "Not assigned"}
+                        `;
 
                     // Close button
                     if(t.status === "Resolved"){
@@ -90,7 +101,7 @@
                         btn.onclick = () => updateStatus(t.id, "Closed");
                         li.appendChild(btn);
                     }
-                    list.appendChild(li);
+                    list.appendChild(div);
                 });
             }
 
@@ -104,15 +115,21 @@
                 list.innerHTML = '';
 
                 data.forEach(t =>{
-                    const li = document.createElement('li');
-                    li.innerText = `${t.title} (${t.location})`;
+                    const div = document.createElement('div');
+                    div.className = "card";
+
+                    div.innerHTML = `
+                        <strong>${t.title}</strong><br>
+                        Location: ${t.location}<br>
+                        Issue: ${t.issue_type}
+                        `;
 
                     const btn = document.createElement('button');
                     btn.innerText = "Pick";
                     btn.onclick = () => pickTicket(t.id);
 
-                    li.appendChild(btn);
-                    list.appendChild(li);
+                    div.appendChild(btn);
+                    list.appendChild(div);
                 });
             }
 
@@ -166,12 +183,16 @@
             // Load Notifications
             async function loadNotifications() {
                 const res = await fetch('/notifications');
+                const data = await res.json();
+
+                const container = document.getElementById('notifications');
                 list.innerHTML = '';
 
                 data.forEach(n => {
-                    const li = document.createElement('li');
-                    li.innerText = n.message;
-                    list.appendChild(li);
+                    const div = document.createElement('div');
+                    div.className = "notification";
+                    div.innerText = n.message;
+                    div.appendChild(div);
                 });
             }
 
@@ -180,6 +201,8 @@
                 await fetch('logout');
                 window.location.href = "/auth";
             }
+
+            loadNotifications();
         </script>
         
     </body>
